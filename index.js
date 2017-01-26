@@ -1,2 +1,2 @@
 //import './playground/mongodb-connect'
-import './playground/mongodb-delete'
+import './playground/mongodb-update'
