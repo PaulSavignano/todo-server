@@ -1,2 +1,1 @@
-//import './playground/mongodb-connect'
-import './playground/mongodb-update'
+import './server/server'
