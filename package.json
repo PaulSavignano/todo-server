@@ -8,7 +8,7 @@
     "start-dev": "nodemon lib/index.js --exec babel-node",
     "build": "babel lib -d dist",
     "serve": "node dist/index.js",
-    "test": "mocha server/**/*.test.js --compilers js:babel-register",
+    "test": "mocha lib/tests/*.test.js --compilers js:babel-register",
     "test-watch": "nodemon --exec 'npm test'"
   },
   "engines": {
@@ -30,6 +30,6 @@
     "expect": "^1.20.2",
     "mocha": "^3.2.0",
     "nodemon": "^1.11.0",
-    "supertest": "^2.0.1"
+    "supertest": "^2.0.0"
   }
 }
