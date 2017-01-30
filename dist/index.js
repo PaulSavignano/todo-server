@@ -65,12 +65,40 @@ app.get('/todos/:id', function (req, res) {
 
 app.delete('/todos/:id', function (req, res) {
   var id = req.params.id;
-  if (!_mongodb.ObjectID.isValid(id)) return res.status(404).send();
+  if (!_mongodb.ObjectID.isValid(id)) {
+    return res.status(404).send();
+  }
   _todo2.default.findByIdAndRemove(id).then(function (todo) {
     if (!todo) return res.status(404).send();
-    return res.status(200).send();
+    res.send({ todo: todo });
   }).catch(function (err) {
     res.status(400).send();
+  });
+});
+
+app.patch('/todos/:id', function (req, res) {
+  var id = req.params.id;
+  var _req$body = req.body,
+      text = _req$body.text,
+      completed = _req$body.completed,
+      completedAt = _req$body.completedAt;
+
+  if (!_mongodb.ObjectID.isValid(id)) {
+    return res.statue(404).send();
+  }
+  if (typeof completed === 'boolean' && completed) {
+    completedAt = new Date().getTime();
+  } else {
+    completed = false;
+    completedAt = null;
+  }
+  _todo2.default.findByIdAndUpdate(id, { $set: { text: text, completed: completed } }, { new: true }).then(function (todo) {
+    if (!todo) {
+      return res.status(404).send;
+    }
+    res.send({ todo: todo });
+  }).catch(function (err) {
+    res.status(400).send;
   });
 });
 
