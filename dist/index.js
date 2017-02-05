@@ -26,16 +26,19 @@ var _user = require('./models/user');
 
 var _user2 = _interopRequireDefault(_user);
 
+var _authenticate = require('./middleware/authenticate');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var app = (0, _express2.default)();
-var port = process.env.PORT || 3000;
+var port = process.env.PORT;
 
 app.use(_bodyParser2.default.json());
 
-app.post('/todos', function (req, res) {
+app.post('/todos', _authenticate.authenticate, function (req, res) {
   var todo = new _todo2.default({
-    text: req.body.text
+    text: req.body.text,
+    _creator: req.user._id
   });
   todo.save().then(function (doc) {
     res.send(doc);
@@ -44,18 +47,23 @@ app.post('/todos', function (req, res) {
   });
 });
 
-app.get('/todos', function (req, res) {
-  _todo2.default.find().then(function (todos) {
+app.get('/todos', _authenticate.authenticate, function (req, res) {
+  _todo2.default.find({
+    _creator: req.user._id
+  }).then(function (todos) {
     res.send({ todos: todos });
   }, function (err) {
     res.status(400).send(err);
   });
 });
 
-app.get('/todos/:id', function (req, res) {
+app.get('/todos/:id', _authenticate.authenticate, function (req, res) {
   var id = req.params.id;
   if (!_mongodb.ObjectID.isValid(id)) return res.status(404).send();
-  _todo2.default.findById(id).then(function (todo) {
+  _todo2.default.findOne({
+    _id: id,
+    _creator: req.user._id
+  }).then(function (todo) {
     if (!todo) return res.status(404).send();
     res.send({ todo: todo });
   }).catch(function (err) {
@@ -63,12 +71,15 @@ app.get('/todos/:id', function (req, res) {
   });
 });
 
-app.delete('/todos/:id', function (req, res) {
+app.delete('/todos/:id', _authenticate.authenticate, function (req, res) {
   var id = req.params.id;
   if (!_mongodb.ObjectID.isValid(id)) {
     return res.status(404).send();
   }
-  _todo2.default.findByIdAndRemove(id).then(function (todo) {
+  _todo2.default.findOneAndRemove({
+    _id: id,
+    _creator: req.user._id
+  }).then(function (todo) {
     if (!todo) return res.status(404).send();
     res.send({ todo: todo });
   }).catch(function (err) {
@@ -76,29 +87,72 @@ app.delete('/todos/:id', function (req, res) {
   });
 });
 
-app.patch('/todos/:id', function (req, res) {
+app.patch('/todos/:id', _authenticate.authenticate, function (req, res) {
   var id = req.params.id;
   var _req$body = req.body,
       text = _req$body.text,
-      completed = _req$body.completed,
-      completedAt = _req$body.completedAt;
+      completed = _req$body.completed;
 
   if (!_mongodb.ObjectID.isValid(id)) {
     return res.statue(404).send();
   }
   if (typeof completed === 'boolean' && completed) {
-    completedAt = new Date().getTime();
+    req.body.completedAt = new Date().getTime();
   } else {
-    completed = false;
-    completedAt = null;
+    req.body.completed = false;
+    req.body.completedAt = null;
   }
-  _todo2.default.findByIdAndUpdate(id, { $set: { text: text, completed: completed } }, { new: true }).then(function (todo) {
+  _todo2.default.findOneAndUpdate({
+    _id: id,
+    _creator: req.user._id
+  }, { $set: req.body }, { new: true }).then(function (todo) {
     if (!todo) {
       return res.status(404).send;
     }
     res.send({ todo: todo });
   }).catch(function (err) {
     res.status(400).send;
+  });
+});
+
+app.post('/users', function (req, res) {
+  var _req$body2 = req.body,
+      email = _req$body2.email,
+      password = _req$body2.password;
+
+  var user = new _user2.default({ email: email, password: password });
+  user.save().then(function () {
+    return user.generateAuthToken();
+  }).then(function (token) {
+    res.header('x-auth', token).send(user);
+  }).catch(function (err) {
+    res.status(400).send(err);
+  });
+});
+
+app.post('/users/login', function (req, res) {
+  var _req$body3 = req.body,
+      email = _req$body3.email,
+      password = _req$body3.password;
+
+  _user2.default.findByCredentials(email, password).then(function (user) {
+    return user.generateAuthToken().then(function (token) {
+      return res.header('x-auth', token).send(user);
+    });
+  }).catch(function (err) {
+    return res.status(400).send();
+  });
+});
+
+app.get('/users/me', _authenticate.authenticate, function (req, res) {
+  res.send(req.user);
+});
+
+app.delete('/users/me/token', _authenticate.authenticate, function (req, res) {
+  req.user.removeToken(req.token).then(function () {
+    res.status(200).send();
+  }, function () {
+    res.status(400).send();
   });
 });
 

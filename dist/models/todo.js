@@ -24,6 +24,10 @@ var Todo = _mongoose2.default.model('Todo', {
   completedAt: {
     type: Number,
     default: null
+  },
+  _creator: {
+    type: _mongoose2.default.Schema.Types.ObjectId,
+    required: true
   }
 });
 
